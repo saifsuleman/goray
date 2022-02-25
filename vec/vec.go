@@ -57,6 +57,10 @@ func (v Vector) Normalize() Vector {
 	return NewVector(v.x/l, v.y/l, v.z/l)
 }
 
+func (v Vector) ToArray() []float64 {
+	return []float64{v.x, v.y, v.z}
+}
+
 func (v Vector) RotateYP(yaw float64, pitch float64) Vector {
 	yawRads := yaw * (math.Pi / 180)
 	pitchRads := pitch * (math.Pi / 180)

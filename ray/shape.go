@@ -6,5 +6,5 @@ import (
 
 type Shape interface {
 	getNormalAt(origin vec.Vector, point vec.Vector) vec.Vector
-	calculateIntersection(origin *vec.Vector, ray *Ray) (vec.Vector, bool)
+	calculateIntersection(origin vec.Vector, ray *Ray) (vec.Vector, bool)
 }

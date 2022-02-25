@@ -1,8 +1,15 @@
 package renderer
 
 import (
+	"image"
+	"image/color"
+	"image/jpeg"
 	"math"
+	"os"
 
+	"github.com/skratchdot/open-golang/open"
+
+	"github.com/hajimehoshi/ebiten"
 	"github.com/saifsuleman/goray/pixel"
 	"github.com/saifsuleman/goray/ray"
 	"github.com/saifsuleman/goray/vec"
@@ -14,7 +21,7 @@ const (
 	MAX_REFLECTION_BOUNCES = 4
 )
 
-func Render(scene *ray.Scene, width int, height int, resolution float64) *pixel.PixelBuffer {
+func Render(scene *ray.Scene, width int, height int, resolution float64, screen *ebiten.Image) *pixel.PixelBuffer {
 	buf := pixel.NewBuffer()
 
 	blockSize := int(1.0 / resolution)
@@ -26,13 +33,49 @@ func Render(scene *ray.Scene, width int, height int, resolution float64) *pixel.
 
 			for i := 0; i < blockSize; i++ {
 				for j := 0; j < blockSize; j++ {
-					buf.Set(x+i, y+j, p)
+					screen.Set(x+i, y+j, color.RGBA64{
+						R: p.Color.GetRed(),
+						G: p.Color.GetGreen(),
+						B: p.Color.GetBlue(),
+						A: 65535,
+					})
 				}
 			}
 		}
 	}
 
 	return &buf
+}
+
+func RenderFile(filename string, scene *ray.Scene, width int, height int) {
+	upLeft := image.Point{X: 0, Y: 0}
+	lowRight := image.Point{X: width, Y: height}
+	img := image.NewRGBA(image.Rectangle{Min: upLeft, Max: lowRight})
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			u, v := getNormalizedScreenCoordinates(x, y, width, height)
+			p := computePixel(scene, u, v)
+			col := color.RGBA64{
+				R: p.Color.GetRed(),
+				G: p.Color.GetGreen(),
+				B: p.Color.GetBlue(),
+				A: 65535,
+			}
+			img.Set(x, y, col)
+		}
+	}
+
+	f, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	if err = jpeg.Encode(f, img, nil); err != nil {
+		panic(err)
+	}
+
+	open.Start(filename)
 }
 
 func getNormalizedScreenCoordinates(x int, y int, width int, height int) (float64, float64) {
@@ -48,7 +91,7 @@ func getNormalizedScreenCoordinates(x int, y int, width int, height int) (float6
 }
 
 func computePixel(scene *ray.Scene, u float64, v float64) pixel.Pixel {
-	eyePos := vec.NewVector(0, 0, -1/math.Tan(5*(math.Pi/180)))
+	eyePos := vec.NewVector(0, 0, -1/math.Tan((40/2)*(math.Pi/180)))
 	rayDirection := vec.NewVector(u, v, 0).SubtractVector(eyePos).Normalize().RotateYP(scene.Camera.Yaw, scene.Camera.Pitch)
 	r := ray.NewRay(eyePos.AddVector(scene.Camera.Position), rayDirection)
 	hit := r.Cast(scene)
@@ -87,8 +130,10 @@ func computePixelHit(scene *ray.Scene, hit *ray.RayHit, bounces int) pixel.Pixel
 		}
 	}
 
-	pixelColor := pixel.Lerp(hit.Entity.Color, reflection.Color, reflectivity).Multiply(brightness).AddFactor(specularBrightness).
-		Add(hit.Entity.Color.Multiply(emission)).
+	color := hit.Entity.ColorProvider.GetColorAt(hit.Position)
+
+	pixelColor := pixel.Lerp(color, reflection.Color, reflectivity).Multiply(brightness).AddFactor(specularBrightness).
+		Add(color.Multiply(emission)).
 		Add(reflection.Color.Multiply(reflection.Emission * reflectivity))
 
 	return pixel.Pixel{
