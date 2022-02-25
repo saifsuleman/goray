@@ -77,7 +77,7 @@ func (g *Game) Layout(w, h int) (int, int) {
 func main() {
 	scene := ray.NewScene()
 	scene.AddEntity(ray.NewSphere(vec.NewVector(0, 0, 10), 3, pixel.NewColor(65535, 0, 0)))
-	scene.AddEntity(ray.NewSphere(vec.NewVector(8, 0, 10), 3, pixel.NewColor(38*257,222*257,219*257)))
+	scene.AddEntity(ray.NewSphere(vec.NewVector(8, 0, 10), 3, pixel.NewColor(235*257,212*257,48*257)))
 
 	ebiten.SetWindowSize(1280, 720)
 	ebiten.SetWindowTitle("Raytracing")
